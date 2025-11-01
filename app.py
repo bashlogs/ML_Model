@@ -4,6 +4,7 @@ import joblib
 import os
 import time
 import logging
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -30,13 +31,29 @@ min_date = dummy_data["policy_bind_date"].min()
 def home():
     return jsonify({"message": "✅ Insurance Fraud Detection API is running!"})
 
+def preprocess_incident_date(incident_date):
+    """
+    Convert date string (YYYY-MM-DD) → numeric format (YYYYMMDD)
+    If already numeric, return as is.
+    """
+    if isinstance(incident_date, str):
+        try:
+            date_obj = datetime.strptime(incident_date, "%Y-%m-%d")
+            return int(date_obj.strftime("%Y%m%d"))
+        except ValueError:
+            raise ValueError("Invalid date format. Use YYYY-MM-DD.")
+    elif isinstance(incident_date, (int, float)):
+        return incident_date
+    else:
+        raise ValueError("incident_date must be a string in YYYY-MM-DD format or a number.")
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
         policy_number = data.get("policy_number")
-        incident_date = data.get("incident_date")
+        incident_date = preprocess_incident_date(data.get("incident_date"))
         property_claim = data.get("property_claim")
 
         if not (policy_number and incident_date and property_claim):
